@@ -8,33 +8,9 @@ from isaaclab.assets.articulation import ArticulationCfg
 from robot_lab.assets import ROBOT_LAB_ASSETS_DIR
 
 
-@sim_utils.clone
-def spawn_e1_wheel(prim_path, cfg, translation=None, orientation=None, **kwargs):
-    """Import E1 and allow continuous wheel rotation in the spawned USD only.
-
-    The source URDF intentionally retains its zero/zero wheel limits. Those limits
-    prevent Newton MJWarp from compiling, so override the four wheel joints before
-    physics initialization. The source URDF and the legs' limits remain unchanged.
-    """
-    from pxr import Usd, UsdPhysics
-
-    prim = sim_utils.spawn_from_urdf(prim_path, cfg, translation, orientation, **kwargs)
-    expected = {f"{leg}_wheel_joint" for leg in ("FR", "FL", "RR", "RL")}
-    patched = set()
-    for child in Usd.PrimRange(prim):
-        if child.GetName() in expected and child.IsA(UsdPhysics.RevoluteJoint):
-            joint = UsdPhysics.RevoluteJoint(child)
-            joint.CreateLowerLimitAttr(float("-inf"))
-            joint.CreateUpperLimitAttr(float("inf"))
-            patched.add(child.GetName())
-    if patched != expected:
-        raise ValueError(f"E1 wheel joints missing from the imported USD: {sorted(expected - patched)}")
-    return prim
-
-
 E1_WHEEL_CFG = ArticulationCfg(
     spawn=sim_utils.UrdfFileCfg(
-        func=spawn_e1_wheel,
+        func=sim_utils.spawn_from_urdf,
         asset_path=f"{ROBOT_LAB_ASSETS_DIR}/Robots/E1_DOG_v2/E1_DOG_wheel_no_head.urdf",
         fix_base=False,
         merge_fixed_joints=False,
