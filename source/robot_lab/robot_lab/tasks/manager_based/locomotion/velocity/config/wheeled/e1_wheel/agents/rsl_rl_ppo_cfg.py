@@ -20,7 +20,7 @@ class E1WheelRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         hidden_dims=[512, 256, 128],
         activation="elu",
         obs_normalization=True,
-        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=0.5),
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=0.5, std_type="scalar", std_range=(0.05,0.8),),
     )
     critic = RslRlMLPModelCfg(
         hidden_dims=[512, 256, 128],
