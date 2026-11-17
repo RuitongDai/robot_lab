@@ -9,7 +9,7 @@ from cusrl.environment.isaaclab import TrainerCfg
 
 @dataclass
 class E1WheelRoughTrainerCfg(TrainerCfg):
-    max_iterations = 10000
+    max_iterations = 20000
     save_interval = 100
     experiment_name = "e1_wheel_rough"
     agent_factory = cusrl.ActorCritic.Factory(
@@ -25,7 +25,7 @@ class E1WheelRoughTrainerCfg(TrainerCfg):
                 hidden_dims=[512, 256, 128], activation_fn="ELU", ends_with_activation=True
             ),
         ),
-        optimizer_factory=cusrl.OptimizerFactory("AdamW", defaults={"lr": 3.0e-4}),
+        optimizer_factory=cusrl.OptimizerFactory("AdamW", defaults={"lr": 1.0e-3}),
         sampler=cusrl.AutoMiniBatchSampler(num_epochs=5, num_mini_batches=4),
         hooks=[
             cusrl.hook.ValueComputation(),

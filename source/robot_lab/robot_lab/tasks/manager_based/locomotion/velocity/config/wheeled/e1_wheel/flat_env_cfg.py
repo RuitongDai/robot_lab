@@ -8,8 +8,6 @@ from .rough_env_cfg import E1WheelRoughEnvCfg
 
 @configclass
 class E1WheelFlatEnvCfg(E1WheelRoughEnvCfg):
-    """E1 velocity tracking on a plane, without terrain ray casters."""
-
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
@@ -21,7 +19,6 @@ class E1WheelFlatEnvCfg(E1WheelRoughEnvCfg):
         self.scene.terrain.terrain_generator = None
         # no height scan
         self.scene.height_scanner = None
-        self.scene.height_scanner_base = None
         self.observations.policy.height_scan = None
         self.observations.critic.height_scan = None
         # no terrain curriculum

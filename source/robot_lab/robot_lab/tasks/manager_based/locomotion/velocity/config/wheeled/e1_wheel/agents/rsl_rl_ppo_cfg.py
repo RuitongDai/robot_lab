@@ -8,8 +8,6 @@ from isaaclab_rl.rsl_rl import RslRlMLPModelCfg, RslRlOnPolicyRunnerCfg, RslRlPp
 
 @configclass
 class E1WheelRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
-    """PPO starting configuration for the 20-action E1 wheeled quadruped."""
-
     num_steps_per_env = 24
     max_iterations = 20000
     save_interval = 100

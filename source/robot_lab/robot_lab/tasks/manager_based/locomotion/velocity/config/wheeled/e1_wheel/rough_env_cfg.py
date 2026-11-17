@@ -27,7 +27,7 @@ class E1WheelActionsCfg(ActionsCfg):
     )
 
     joint_vel = mdp.JointVelocityActionCfg(
-        asset_name="robot", joint_names=[""], scale=10.0, use_default_offset=True, clip=None, preserve_order=True
+        asset_name="robot", joint_names=[""], scale=5.0, use_default_offset=True, clip=None, preserve_order=True
     )
 
 
@@ -50,8 +50,6 @@ class E1WheelRewardsCfg(RewardsCfg):
 
 @configclass
 class E1WheelRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
-    """Velocity tracking with 16 leg position targets and four wheel velocity targets."""
-
     actions: E1WheelActionsCfg = E1WheelActionsCfg()
     rewards: E1WheelRewardsCfg = E1WheelRewardsCfg()
 
@@ -77,49 +75,35 @@ class E1WheelRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
 
         # ------------------------------Scene------------------------------
         self.scene.robot = replace(E1_WHEEL_CFG, prim_path="{ENV_REGEX_NS}/Robot")
-        self.scene.num_envs = 1024
-        self.scene.terrain.max_init_terrain_level = 1
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/Geometry/base_link"
         self.scene.height_scanner.spawn = None
         self.scene.height_scanner_base.prim_path = "{ENV_REGEX_NS}/Robot/Geometry/base_link"
         self.scene.height_scanner_base.spawn = None
 
         # ------------------------------Observations------------------------------
-        # Wheel angles accumulate indefinitely; observe leg angles and all joint velocities.
-        for group in (self.observations.policy, self.observations.critic):
-            group.joint_pos.params["asset_cfg"] = SceneEntityCfg(
-                "robot", joint_names=self.leg_joint_names, preserve_order=True
-            )
-            group.joint_vel.params["asset_cfg"] = SceneEntityCfg(
-                "robot", joint_names=self.joint_names, preserve_order=True
-            )
-            group.joint_vel.scale = 0.05
+        self.observations.policy.joint_pos.func = mdp.joint_pos_rel_without_wheel
+        self.observations.policy.joint_pos.params["wheel_asset_cfg"] = SceneEntityCfg(
+            "robot", joint_names=self.wheel_joint_names
+        )
+        self.observations.critic.joint_pos.func = mdp.joint_pos_rel_without_wheel
+        self.observations.critic.joint_pos.params["wheel_asset_cfg"] = SceneEntityCfg(
+            "robot", joint_names=self.wheel_joint_names
+        )
         self.observations.policy.base_lin_vel.scale = 2.0
         self.observations.policy.base_ang_vel.scale = 0.25
         self.observations.policy.joint_pos.scale = 1.0
         self.observations.policy.joint_vel.scale = 0.05
         self.observations.policy.base_lin_vel = None
         self.observations.policy.height_scan = None
+        self.observations.policy.joint_pos.params["asset_cfg"].joint_names = self.joint_names
+        self.observations.policy.joint_vel.params["asset_cfg"].joint_names = self.joint_names
 
         # ------------------------------Actions------------------------------
         # reduce action scale
-        self.actions.joint_pos.scale = {
-            ".*_thigh_joint": 0.25,
-            ".*_hip_roll_joint": 0.125,
-            ".*_hip_yaw_joint": 0.125,
-            ".*_calf_joint": 0.25,
-        }
-        # Action-term clipping happens after scaling and adding the default pose.
-        self.actions.joint_pos.clip = {
-            ".*_thigh_joint": (-3.1416, 3.1416),
-            ".*L_hip_roll_joint": (-0.4363, 3.1416),
-            ".*R_hip_roll_joint": (-3.1416, 0.4363),
-            ".*L_hip_yaw_joint": (-1.4835, 0.7854),
-            ".*R_hip_yaw_joint": (-0.7854, 1.4835),
-            ".*_calf_joint": (-2.618, 1.309),
-        }
-        self.actions.joint_vel.scale = 10.0
-        self.actions.joint_vel.clip = {".*": (-13.09, 13.09)}
+        self.actions.joint_pos.scale = {".*_hip_(roll|yaw)_joint": 0.125, "^(?!.*_hip_(roll|yaw)_joint).*": 0.25}
+        self.actions.joint_vel.scale = 5.0
+        self.actions.joint_pos.clip = {".*": (-100.0, 100.0)}
+        self.actions.joint_vel.clip = {".*": (-100.0, 100.0)}
         self.actions.joint_pos.joint_names = self.leg_joint_names
         self.actions.joint_vel.joint_names = self.wheel_joint_names
 
@@ -128,51 +112,37 @@ class E1WheelRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
             "pose_range": {
                 "x": (-0.5, 0.5),
                 "y": (-0.5, 0.5),
-                "z": (0.0, 0.03),
-                "roll": (-0.05, 0.05),
-                "pitch": (-0.05, 0.05),
+                "z": (0.0, 0.2),
+                "roll": (-3.14, 3.14),
+                "pitch": (-3.14, 3.14),
                 "yaw": (-3.14, 3.14),
             },
             "velocity_range": {
-                "x": (0.0, 0.0),
-                "y": (0.0, 0.0),
-                "z": (0.0, 0.0),
-                "roll": (0.0, 0.0),
-                "pitch": (0.0, 0.0),
-                "yaw": (0.0, 0.0),
+                "x": (-0.5, 0.5),
+                "y": (-0.5, 0.5),
+                "z": (-0.5, 0.5),
+                "roll": (-0.5, 0.5),
+                "pitch": (-0.5, 0.5),
+                "yaw": (-0.5, 0.5),
             },
         }
         self.events.randomize_rigid_body_mass_base.params["asset_cfg"].body_names = [self.base_link_name]
-        self.events.randomize_rigid_body_mass_base.params["mass_distribution_params"] = (-0.5, 0.5)
         self.events.randomize_rigid_body_mass_others.params["asset_cfg"].body_names = [
-            ".*_(thigh|hip_roll|hip_yaw|calf|wheel)_link"
+            f"^(?!.*{self.base_link_name}).*"
         ]
-        self.events.randomize_rigid_body_mass_others.params["mass_distribution_params"] = (0.9, 1.1)
         self.events.randomize_com_positions.params["asset_cfg"].body_names = [self.base_link_name]
-        self.events.randomize_com_positions.params["com_range"] = {
-            "x": (-0.01, 0.01),
-            "y": (-0.01, 0.01),
-            "z": (-0.01, 0.01),
-        }
-        self.events.randomize_apply_external_force_torque = None
-        self.events.randomize_rigid_body_material.params["static_friction_range"] = (0.6, 1.2)
-        self.events.randomize_rigid_body_material.params["dynamic_friction_range"] = (0.5, 1.0)
-        self.events.randomize_rigid_body_material.params["restitution_range"] = (0.0, 0.0)
-        self.events.randomize_reset_joints.params["position_range"] = (0.95, 1.05)
-        self.events.randomize_actuator_gains.params["stiffness_distribution_params"] = (0.8, 1.2)
-        self.events.randomize_actuator_gains.params["damping_distribution_params"] = (0.8, 1.2)
-        self.events.randomize_push_robot.params["velocity_range"] = {"x": (-0.2, 0.2), "y": (-0.2, 0.2)}
+        self.events.randomize_apply_external_force_torque.params["asset_cfg"].body_names = [self.base_link_name]
 
         # ------------------------------Rewards------------------------------
         # General
-        self.rewards.is_terminated.weight = -2.0
+        self.rewards.is_terminated.weight = 0
 
         # Root penalties
         self.rewards.lin_vel_z_l2.weight = -2.0
         self.rewards.ang_vel_xy_l2.weight = -0.05
-        self.rewards.flat_orientation_l2.weight = -0.5
-        self.rewards.base_height_l2.weight = -1.0
-        self.rewards.base_height_l2.params["target_height"] = 0.44
+        self.rewards.flat_orientation_l2.weight = 0
+        self.rewards.base_height_l2.weight = 0
+        self.rewards.base_height_l2.params["target_height"] = 0.40
         self.rewards.base_height_l2.params["asset_cfg"].body_names = [self.base_link_name]
         self.rewards.body_lin_acc_l2.weight = 0
         self.rewards.body_lin_acc_l2.params["asset_cfg"].body_names = [self.base_link_name]
@@ -180,7 +150,7 @@ class E1WheelRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # Joint penalties
         self.rewards.joint_torques_l2.weight = -2.5e-5
         self.rewards.joint_torques_l2.params["asset_cfg"].joint_names = self.leg_joint_names
-        self.rewards.joint_torques_wheel_l2.weight = -1.0e-5
+        self.rewards.joint_torques_wheel_l2.weight = 0
         self.rewards.joint_torques_wheel_l2.params["asset_cfg"].joint_names = self.wheel_joint_names
         self.rewards.joint_vel_l2.weight = 0
         self.rewards.joint_vel_l2.params["asset_cfg"].joint_names = self.leg_joint_names
@@ -190,25 +160,24 @@ class E1WheelRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.joint_acc_l2.params["asset_cfg"].joint_names = self.leg_joint_names
         self.rewards.joint_acc_wheel_l2.weight = -2.5e-9
         self.rewards.joint_acc_wheel_l2.params["asset_cfg"].joint_names = self.wheel_joint_names
+        # self.rewards.create_joint_deviation_l1_rewterm("joint_deviation_hip_l1", -0.2, [".*_hip_(roll|yaw)_joint"])
         self.rewards.joint_pos_limits.weight = -5.0
         self.rewards.joint_pos_limits.params["asset_cfg"].joint_names = self.leg_joint_names
-        self.rewards.joint_vel_limits.weight = -0.1
-        self.rewards.joint_vel_limits.params["asset_cfg"].joint_names = self.joint_names
+        self.rewards.joint_vel_limits.weight = 0
+        self.rewards.joint_vel_limits.params["asset_cfg"].joint_names = self.wheel_joint_names
         self.rewards.joint_power.weight = -2e-5
-        self.rewards.joint_power.params["asset_cfg"].joint_names = self.joint_names
-        self.rewards.stand_still.weight = -0.5
+        self.rewards.joint_power.params["asset_cfg"].joint_names = self.leg_joint_names
+        self.rewards.stand_still.weight = -2.0
         self.rewards.stand_still.params["asset_cfg"].joint_names = self.leg_joint_names
-        self.rewards.joint_pos_penalty.weight = -0.5
+        self.rewards.joint_pos_penalty.weight = -1.0
         self.rewards.joint_pos_penalty.params["asset_cfg"].joint_names = self.leg_joint_names
-        self.rewards.joint_pos_penalty.params["stand_still_scale"] = 2.0
         self.rewards.wheel_vel_penalty.weight = 0
         self.rewards.wheel_vel_penalty.params["sensor_cfg"].body_names = [self.foot_link_name]
         self.rewards.wheel_vel_penalty.params["asset_cfg"].joint_names = self.wheel_joint_names
-        # Raw angle equality is not a valid mirror rule for E1's roll/yaw joint axes.
-        self.rewards.joint_mirror.weight = 0
+        self.rewards.joint_mirror.weight = -0.05
         self.rewards.joint_mirror.params["mirror_joints"] = [
-            ["FR_(hip|thigh|calf).*", "RL_(hip|thigh|calf).*"],
-            ["FL_(hip|thigh|calf).*", "RR_(hip|thigh|calf).*"],
+            ["FR_(hip_roll|hip_yaw|thigh|calf).*", "RL_(hip_roll|hip_yaw|thigh|calf).*"],
+            ["FL_(hip_roll|hip_yaw|thigh|calf).*", "RR_(hip_roll|hip_yaw|thigh|calf).*"],
         ]
 
         # Action penalties
@@ -255,8 +224,10 @@ class E1WheelRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
             self.disable_zero_weight_rewards()
 
         # ------------------------------Terminations------------------------------
-        self.terminations.illegal_contact.params["sensor_cfg"].body_names = [self.base_link_name]
-        self.terminations.illegal_contact.params["threshold"] = 10.0
+        # self.terminations.illegal_contact.params["sensor_cfg"].body_names = [
+        #     self.base_link_name, ".*_hip_(roll|yaw)_link"
+        # ]
+        self.terminations.illegal_contact = None
 
         # ------------------------------Curriculums------------------------------
         # self.curriculum.command_levels_lin_vel.params["range_multiplier"] = (0.2, 1.0)
@@ -265,12 +236,6 @@ class E1WheelRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.curriculum.command_levels_ang_vel = None
 
         # ------------------------------Commands------------------------------
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.8, 0.8)
-        self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
-        self.commands.base_velocity.ranges.ang_vel_z = (-0.8, 0.8)
-        self.commands.base_velocity.heading_command = False
-        self.commands.base_velocity.ranges.heading = None
-        self.commands.base_velocity.rel_heading_envs = 0.0
-        self.commands.base_velocity.rel_standing_envs = 0.1
-        self.commands.base_velocity.resampling_time_range = (8.0, 10.0)
-        self.commands.base_velocity.debug_vis = False
+        # self.commands.base_velocity.ranges.lin_vel_x = (-1.5, 1.5)
+        # self.commands.base_velocity.ranges.lin_vel_y = (-1.0, 1.0)
+        # self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
