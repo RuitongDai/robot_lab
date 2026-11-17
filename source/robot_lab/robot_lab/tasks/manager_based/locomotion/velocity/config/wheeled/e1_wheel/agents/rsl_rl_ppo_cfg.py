@@ -11,21 +11,19 @@ class E1WheelRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     """PPO starting configuration for the 20-action E1 wheeled quadruped."""
 
     num_steps_per_env = 24
-    max_iterations = 10000
+    max_iterations = 20000
     save_interval = 100
     experiment_name = "e1_wheel_rough"
-    clip_actions = 1.0
-    obs_groups = {"actor": ["policy"], "critic": ["critic"]}
     actor = RslRlMLPModelCfg(
         hidden_dims=[512, 256, 128],
         activation="elu",
-        obs_normalization=True,
-        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=0.5, std_type="scalar", std_range=(0.05,0.8),),
+        obs_normalization=False,
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0),
     )
     critic = RslRlMLPModelCfg(
         hidden_dims=[512, 256, 128],
         activation="elu",
-        obs_normalization=True,
+        obs_normalization=False,
     )
     algorithm = RslRlPpoAlgorithmCfg(
         value_loss_coef=1.0,
@@ -34,7 +32,7 @@ class E1WheelRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         entropy_coef=0.01,
         num_learning_epochs=5,
         num_mini_batches=4,
-        learning_rate=3.0e-4,
+        learning_rate=1.0e-3,
         schedule="adaptive",
         gamma=0.99,
         lam=0.95,
