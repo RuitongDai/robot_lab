@@ -68,8 +68,18 @@ E1_WHEEL_CFG = ArticulationCfg(
                 ".*_hip_yaw_joint": 15.71,
                 ".*_calf_joint": 13.09,
             },
-            stiffness=50,
-            damping=1,
+            stiffness={
+                ".*_thigh_joint": 60.0,
+                ".*_hip_roll_joint": 60.0,
+                ".*_hip_yaw_joint": 30.0,
+                ".*_calf_joint": 60.0,
+            },
+            damping={
+                ".*_thigh_joint": 3.0,
+                ".*_hip_roll_joint": 3.0,
+                ".*_hip_yaw_joint": 1.5,
+                ".*_calf_joint": 3.0,
+            },
             friction=0.0,
         ),
         "wheels": ImplicitActuatorCfg(
