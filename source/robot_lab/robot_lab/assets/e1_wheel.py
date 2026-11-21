@@ -70,13 +70,13 @@ E1_WHEEL_CFG = ArticulationCfg(
             },
             stiffness={
                 ".*_thigh_joint": 60.0,
-                ".*_hip_roll_joint": 60.0,
+                ".*_hip_roll_joint": 50.0,
                 ".*_hip_yaw_joint": 30.0,
                 ".*_calf_joint": 60.0,
             },
             damping={
                 ".*_thigh_joint": 3.0,
-                ".*_hip_roll_joint": 3.0,
+                ".*_hip_roll_joint": 2.5,
                 ".*_hip_yaw_joint": 1.5,
                 ".*_calf_joint": 3.0,
             },
