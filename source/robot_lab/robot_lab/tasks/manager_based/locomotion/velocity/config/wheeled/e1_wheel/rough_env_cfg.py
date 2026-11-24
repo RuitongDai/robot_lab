@@ -171,9 +171,15 @@ class E1WheelRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.stand_still.params["asset_cfg"].joint_names = self.leg_joint_names
         self.rewards.joint_pos_penalty.weight = -1.0
         self.rewards.joint_pos_penalty.params["asset_cfg"].joint_names = self.leg_joint_names
-        self.rewards.wheel_vel_penalty.weight = -0.05
-        self.rewards.wheel_vel_penalty.params["sensor_cfg"].body_names = [self.foot_link_name]
-        self.rewards.wheel_vel_penalty.params["asset_cfg"].joint_names = self.wheel_joint_names
+        self.rewards.wheel_vel_penalty = RewTerm(
+            func=mdp.wheel_vel_penalty_without_cmd,
+            weight=-0.05,
+            params={
+                "asset_cfg": SceneEntityCfg("robot", joint_names=self.wheel_joint_names),
+                "command_name": "base_velocity",
+                "command_threshold": 1.0e-6,
+            },
+        )
         self.rewards.joint_mirror.weight = -0.05
         self.rewards.joint_mirror.params["mirror_joints"] = [
             ["FR_(hip_roll|hip_yaw|thigh|calf).*", "RL_(hip_roll|hip_yaw|thigh|calf).*"],

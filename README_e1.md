@@ -14,4 +14,3 @@ uv run --extra importers isaaclab play \
   --num_envs 4 \
   --viz newton_gl \
   physics=newton_mjwarp env.commands.base_velocity.rel_standing_envs=1.0
-```

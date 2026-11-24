@@ -164,6 +164,23 @@ def wheel_vel_penalty(
     return reward
 
 
+def wheel_vel_penalty_without_cmd(
+    env: ManagerBasedRLEnv,
+    command_name: str,
+    command_threshold: float = 1.0e-6,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Penalize wheel speed only when the full velocity command is near zero.
+
+    The penalty remains active while braking, regardless of body speed or wheel contact.
+    Nonzero translation and yaw commands are exempt from this penalty.
+    """
+    asset: Articulation = env.scene[asset_cfg.name]
+    cmd = torch.linalg.norm(env.command_manager.get_command(command_name), dim=1)
+    wheel_speed = torch.abs(asset.data.joint_vel.torch[:, asset_cfg.joint_ids]).sum(dim=1)
+    return wheel_speed * (cmd <= command_threshold).to(wheel_speed.dtype)
+
+
 class GaitReward(ManagerTermBase):
     """Gait enforcing reward term for quadrupeds.
 

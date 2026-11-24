@@ -49,6 +49,7 @@ __all__ = [
     "undesired_contacts",
     "upward",
     "wheel_vel_penalty",
+    "wheel_vel_penalty_without_cmd",
 ]
 
 from isaaclab.envs.mdp import *
@@ -94,5 +95,6 @@ from .rewards import (
     undesired_contacts,
     upward,
     wheel_vel_penalty,
+    wheel_vel_penalty_without_cmd,
 )
 from .utils import is_env_assigned_to_terrain, is_robot_on_terrain
